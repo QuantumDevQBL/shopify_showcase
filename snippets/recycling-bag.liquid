@@ -1,0 +1,135 @@
+{% if linklists.recycling-bag.links.size > 0 and
+linklists.recycling-bag.links.first.type == 'product_link' %}
+
+<div
+  id="is-a-gift"
+  style="clear: left; margin: 30px 0"
+  class="clearfix rte"
+>
+  <p>
+    <input
+      id="recycling-bag"
+      type="checkbox"
+      name="attributes[recycling-bag]"
+      value="yes"
+      {% if cart.attributes.recycling-bag %}
+      checked="checked"
+      {% endif %}
+      style="float: none"
+    />
+    <label
+      for="recycling-bag"
+      style="display:inline; padding-left: 5px; float: none;"
+    >
+      Ajouter un sac de <a target=”_blank” href="https://brai.fr/pages/kids-oclock-x-brai">BRAI x Kids O'Clock</a> pour recycler mes vêtements (gratuit)
+    </label>
+  </p>
+</div>
+
+{% assign id = linklists.recycling-bag.links.first.object.variants.first.id
+%} {% assign recycling_bags_in_cart = 0 %} {% for item in cart.items %} {% if
+item.id == id %} {% assign recycling_bags_in_cart = item.quantity %} {% endif %}
+{% endfor %}
+
+<style>
+  #updates_{{ id }} { display: none; }
+</style>
+
+<script>
+
+  Shopify.Cart = Shopify.Cart || {};
+
+  Shopify.Cart.RecycleBag = {};
+
+  Shopify.Cart.RecycleBag.set = function() {
+    var headers = new Headers({ 'Content-Type': 'application/json' });
+
+    var request = {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ updates: { {{ id }}: 1 }, attributes: { 'recycling-bag': true } })
+    };
+    fetch('/cart/update.js', request)
+    .then(function() {
+      location.href = '/cart';
+    });
+  }
+
+  Shopify.Cart.RecycleBag.remove = function() {
+    var headers = new Headers({ 'Content-Type': 'application/json' });
+
+    var request = {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ updates: { {{ id }}: 0 }, attributes: { 'recycling-bag': '' } })
+    };
+    fetch('/cart/update.js', request)
+    .then(function() {
+      location.href = '/cart';
+    });
+  }
+
+  // If we have nothing but gift-wrap items in the cart.
+  {% if cart.items.size == 1 and recycling_bags_in_cart > 0 %}
+  document.addEventListener("DOMContentLoaded", function(){
+    Shopify.Cart.RecycleBag.remove();
+  });
+  // If we have more than one recycling-bag item in the cart.
+  {% elsif recycling_bags_in_cart > 1 %}
+  document.addEventListener("DOMContentLoaded", function(){
+    Shopify.Cart.RecycleBag.set();
+  });
+  // If we have a recycling-bag item in the cart but our recycling-bag cart attribute has not been set.
+  {% elsif recycling_bags_in_cart > 0 and cart.attributes.recycling-bag == blank %}
+  document.addEventListener("DOMContentLoaded", function(){
+    Shopify.Cart.RecycleBag.set();
+  });
+  // If we have no recycling-bag item in the cart but our recycling-bag cart attribute has been set.
+  {% elsif recycling_bags_in_cart == 0 and cart.attributes.recycling-bag != blank %}
+  document.addEventListener("DOMContentLoaded", function(){
+    Shopify.Cart.RecycleBag.set();
+  });
+  {% endif %}
+
+  // When the recycling-bag checkbox is checked or unchecked.
+  document.addEventListener("DOMContentLoaded", function(){
+    document.querySelector('[name="attributes[recycling-bag]"]').addEventListener("change", function(event) {
+      if (event.target.checked) {
+        Shopify.Cart.RecycleBag.set();
+      } else {
+        Shopify.Cart.RecycleBag.remove();
+      }
+
+    });
+
+    document.querySelector('#gift-note').addEventListener("change", function(evt) {
+      var note = evt.target.value;
+      var headers = new Headers({ 'Content-Type': 'application/json' });
+
+      var request = {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ attributes: { 'gift-note': note } })
+      };
+
+      fetch('/cart/update.js', request);
+    });
+  });
+</script>
+
+{% else %}
+
+<p style="clear: left; margin: 30px 0" class="rte">
+  You attempted to add a recycling-bag script to your shopping cart, but it
+  won't work because you don't have a link list with handle
+  <code>recycling-bag</code> which, in turn, contains a link to your
+  recycling-bag product. Please review the steps outlined
+  <a
+    href="https://help.shopify.com/manual/online-store/themes/os/customize/add-gift-wrap-option"
+    target="_blank"
+    rel="noopener noreferrer nofollow"
+    >here</a
+  >.
+</p>
+
+{% endif %}
